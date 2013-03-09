@@ -1,0 +1,252 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>RGBSocketColors Test</title>
+        <style>
+          .divContainer { width: 100%;
+                          height: 50px;
+                          margin: 1px solid black;
+                          vertical-align: middle;
+                          padding: 2px;
+                        }
+          .divRGB { width: 100%;
+                    height: 100%;
+                    min-height: 150px;
+                  }
+          .divR { color: #fff;
+                  background-color: #ff0000;
+                  height: 30px;
+                  vertical-align: middle;
+                  width: 0%;
+                  height: 100%;
+                }
+          .divG { color: #fff;
+                  background-color: #00ff00;
+                  height: 30px;
+                  vertical-align: middle;
+                  width: 0%;
+                  height: 100%;
+                }
+          .divB { color: #fff;
+                  background-color: #0000ff;
+                  height: 30px;
+                  vertical-align: middle;
+                  width: 0%;
+                  height: 100%;
+                }
+          .tdDetail { text-align: center;
+                      vertical-align: middle;
+                      width: 10%;
+                    }
+          .tdBar { text-align: left;
+                   vertical-align: middle;
+                   width: 50%;
+                 }
+          .tdBox { text-align: center;
+                   vertical-align: middle;
+                   padding: 15px;
+                   width: 40%;
+                 }
+          .tdFullColor { text-align: center;
+                         vertical-align: middle;
+                         font-weight: bold;
+                         padding: 15px;
+                       }
+        </style>
+
+    <script language = "javascript" type = "text/javascript">
+"use strict";
+      var _wsck;
+      
+      var objLblStatus = null;
+      var objDivR = null;
+      var objDivG = null;
+      var objDivB = null;
+      var objDivRGB = null;
+      var objTdR = null;
+      var objTdG = null;
+      var objTdB = null;
+      var objLblFullColor = null;
+      
+      function setUpValues(pColorStr)
+      {
+        var tRed = pColorStr.substr(0, 2);
+        var tGreen = pColorStr.substr(2, 2);
+        var tBlue = pColorStr.substr(4, 2);
+        
+        var nRed = parseInt(tRed, 16);
+        var nGreen = parseInt(tGreen, 16);
+        var nBlue = parseInt(tBlue, 16);
+        
+        var percRed = Math.round((nRed / 255) * 10000) / 100;
+        var percGreen = Math.round((nGreen / 255) * 10000) / 100;
+        var percBlue = Math.round((nBlue / 255) * 10000) / 100;
+        
+        objDivRGB.style.background = "#" + pColorStr;
+        objDivR.style.width = percRed + "%";
+        objDivG.style.width = percGreen + "%";
+        objDivB.style.width = percBlue + "%";
+        
+        objTdR.innerHTML = tRed + "<br />" + percRed + "%";
+        objTdG.innerHTML = tGreen + "<br />" + percGreen + "%";
+        objTdB.innerHTML = tBlue + "<br />" + percBlue + "%";
+                                              
+        objLblFullColor.textContent = "#" + pColorStr;
+      }
+      
+      function setStartScreen()
+      {
+        document.getElementById("trStart").style.display = "";
+        document.getElementById("trStop").style.display = "none";
+        document.getElementById("tblColors").style.display = "none";
+      }
+      
+      function setRunningScreen()
+      {
+        document.getElementById("trStart").style.display = "none";
+        document.getElementById("trStop").style.display = "";
+        document.getElementById("tblColors").style.display = "";
+      }
+      
+      function isStartable()
+      {
+        var _address = document.getElementById("txtAddress").value;
+        var _message = "";
+       
+        if (_message == "" && !("WebSocket" in window))
+        {
+          _message = "Sorry.... This Browser doesn't support WebSockets !!";
+        }
+        
+        if (_message == "" && _address == "")
+          _message = "Please, specify Arduino's IP address";
+
+        if (_message == "")
+        {
+          var ipRegExp=/^\d{0,3}\.\d{0,3}\.\d{0,3}\.\d{0,3}$/;
+          if (!ipRegExp.test(_address))
+            _message = _address + " don't seem to be a valid IP address !";
+        }
+        
+        if (_message != "")
+          alert(_message);
+          
+        return _message == "";
+      }
+      
+      
+      function DoStart()
+      {
+        objLblStatus = document.getElementById("lblStatus");
+        objDivR = document.getElementById("divR");
+        objDivG = document.getElementById("divG");
+        objDivB = document.getElementById("divB");
+        objDivRGB = document.getElementById("divRGB");
+        objTdR = document.getElementById("tdR");
+        objTdG = document.getElementById("tdG");
+        objTdB = document.getElementById("tdB");
+        objLblFullColor = document.getElementById("lblFullColor");
+
+        if (isStartable())
+        {
+          setRunningScreen();
+          
+          objLblStatus.textContent = "Connecting...";
+          
+          _wsck = new WebSocket("ws://" + document.getElementById("txtAddress").value);
+          
+          _wsck.onopen = function(evt) {
+                                         objLblStatus.textContent = "Connected !";
+			               };
+          _wsck.onclose = function(evt) {
+                                          objLblStatus.textContent = "Closed !";
+                                          setStartScreen();
+			                };
+          _wsck.onerror = function(evt) {
+                                          objLblStatus.textContent = evt;
+                                          alert("Error : " + evt);
+			                };
+          _wsck.onmessage = function(evt) {
+                                            if (evt.data != null && evt.data.length == 6)
+                                            {
+                                              var tData = evt.data;
+                                              setUpValues(tData);
+                                            }
+			                  };
+        }
+      }
+    
+      function DoStop()
+      {
+        _wsck.send("DIE");
+        setUpValues("000000");
+        setStartScreen();
+      }
+    
+    </script>
+  </head>
+  <body>
+    <h1 style="text-align: center;">RGBSocketColors Test</h1>
+
+    <table style="width: 100%">
+      <tr id="trStart">
+        <td>
+          <b>Arduino's IP Address</b><br /><input type="text" id="txtAddress" value="150.1.3.78" />
+        </td>
+        <td style="vertical-alignment: middle; text-align: right;">
+          <input type="button" value="Start" onclick="DoStart();" />
+        </td>
+      </tr>
+      <tr id="trStop" style="display: none;">
+        <td>
+          <b>Status : </b><label id="lblStatus" />
+        </td>
+        <td style="vertical-alignment: middle; text-align: right;">
+          <input type="button" value="Stop" onclick="DoStop();" />
+        </td>
+      </tr>
+    </table>
+    
+    <br />
+    
+    <table id="tblColors" style="width: 100%; display: none;">
+      <tr>
+        <td id="tdR" class="tdDetail">
+        </td>
+        <td class="tdBar">
+          <div class="divContainer">
+            <div class="divR" id="divR"></div>
+          </div>
+        </td>
+        <td rowspan="3" class="tdBox">
+          <div class="divRGB" id="divRGB"></div>
+        </td>
+      </tr>
+      <tr>
+        <td id="tdG" class="tdDetail">
+        </td>
+        <td class="tdBar">
+          <div class="divContainer">
+            <div class="divG" id="divG"></div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td id="tdB" class="tdDetail">
+        </td>
+        <td class="tdBar">
+          <div class="divContainer">
+            <div class="divB" id="divB"></div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td class="tdFullColor"><label id="lblFullColor" /></td>
+      </tr>
+    </table>
+
+  </body>
+</html>
